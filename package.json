@@ -1,0 +1,62 @@
+{
+  "name": "tau",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Tau UI, a desktop workspace for the Pi Coding Agent",
+  "license": "MIT",
+  "homepage": "https://github.com/Ninthless/Tau#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ninthless/Tau.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Ninthless/Tau/issues"
+  },
+  "keywords": [
+    "pi",
+    "pi.dev",
+    "coding-agent",
+    "agent-ui",
+    "electron",
+    "react",
+    "workspace"
+  ],
+  "main": "out/main/main.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "dev:renderer": "vite --config electron.vite.config.ts --mode renderer",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "build:win": "npm run build && electron-builder --win"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "electron-vite": "^2.3.0",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.2",
+    "vite": "^5.3.1"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "latest",
+    "electron-store": "^8.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.1"
+  },
+  "build": {
+    "appId": "dev.pi.tau",
+    "productName": "Tau",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
