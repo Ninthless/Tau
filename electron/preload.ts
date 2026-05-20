@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld("piAgent", {
   switchSession: (path: string) => ipcRenderer.invoke("agent:switchSession", { path }),
   fork: (entryId: string) => ipcRenderer.invoke("agent:fork", { entryId }),
   listSessions: (cwd: string) => ipcRenderer.invoke("agent:listSessions", { cwd }),
+  listAllSessions: () => ipcRenderer.invoke("agent:listAllSessions"),
+  deleteSession: (path: string) => ipcRenderer.invoke("agent:deleteSession", { path }),
+  selectDirectory: () => ipcRenderer.invoke("app:selectDirectory"),
   setModel: (provider: string, modelId: string) =>
     ipcRenderer.invoke("agent:setModel", { provider, modelId }) as Promise<{ ok: boolean }>,
   getModels: () => ipcRenderer.invoke("agent:getModels"),
@@ -60,5 +63,17 @@ contextBridge.exposeInMainWorld("piAgent", {
     const listener = (_: Electron.IpcRendererEvent, event: unknown) => cb(event)
     ipcRenderer.on("package:progress", listener)
     return () => ipcRenderer.removeListener("package:progress", listener)
+  },
+})
+
+contextBridge.exposeInMainWorld("winControls", {
+  minimize: () => ipcRenderer.invoke("win:minimize"),
+  maximize: () => ipcRenderer.invoke("win:maximize"),
+  close: () => ipcRenderer.invoke("win:close"),
+  isMaximized: () => ipcRenderer.invoke("win:isMaximized") as Promise<boolean>,
+  onMaximizeChange: (cb: (isMaximized: boolean) => void) => {
+    const listener = (_: Electron.IpcRendererEvent, value: boolean) => cb(value)
+    ipcRenderer.on("win:maximizeChange", listener)
+    return () => ipcRenderer.removeListener("win:maximizeChange", listener)
   },
 })

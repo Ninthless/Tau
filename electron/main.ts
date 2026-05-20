@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from "electron"
+import { app, BrowserWindow, shell, Menu } from "electron"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import { registerIpcHandlers } from "./ipc"
@@ -15,8 +15,8 @@ function createWindow() {
     height: 760,
     minWidth: 700,
     minHeight: 500,
-    backgroundColor: "#1a1a1a",
-    titleBarStyle: "hiddenInset",
+    backgroundColor: "#252525",
+    frame: false,
     webPreferences: {
       preload: join(__dirname, "../preload/preload.js"),
       contextIsolation: true,
@@ -25,6 +25,9 @@ function createWindow() {
   })
 
   setWindow(win)
+
+  win.on("maximize", () => win.webContents.send("win:maximizeChange", true))
+  win.on("unmaximize", () => win.webContents.send("win:maximizeChange", false))
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url)
@@ -42,6 +45,7 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  Menu.setApplicationMenu(null)
   registerIpcHandlers()
   createWindow()
 

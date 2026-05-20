@@ -1,6 +1,10 @@
-import { useEffect, useRef, useState } from "react"
-import Markdown from "react-markdown"
-import { ToolBlock } from "./ToolBlock"
+import { useState } from "react"
+import { Markdown } from "./prompt-kit/markdown"
+import { TextShimmer } from "./prompt-kit/text-shimmer"
+import { Tool } from "./prompt-kit/tool"
+import { ChatContainerRoot, ChatContainerContent } from "./prompt-kit/chat-container"
+import { ScrollButton } from "./prompt-kit/scroll-button"
+import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
 import type { ChatMessage } from "../types"
 
 interface Props {
@@ -8,88 +12,94 @@ interface Props {
 }
 
 export function MessageList({ messages }: Props) {
-  const bottomRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
-
   if (messages.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center text-gray-600">
-        Start a conversation
+      <div className="flex flex-1 items-center justify-center p-8">
+        <div className="max-w-sm rounded-xl border border-dashed border-border px-8 py-10 text-center">
+          <div className="mb-1.5 text-sm font-medium text-foreground">Start a Tau session</div>
+          <div className="text-xs text-muted-foreground">
+            Send a prompt, run a Pi command, or install an extension package from settings.
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-      {messages.map((msg) => (
-        <div
-          key={msg.id}
-          className={`flex flex-col gap-1 ${msg.role === "user" ? "items-end" : "items-start"}`}
-        >
-          {msg.blocks.map((block, i) => {
-            if (block.type === "text") {
-              return msg.role === "user" ? (
-                <div
-                  key={i}
-                  className="max-w-[80%] rounded-2xl bg-accent/20 px-4 py-2 text-sm"
-                >
-                  {block.text}
-                </div>
-              ) : (
-                <div
-                  key={i}
-                  className="prose prose-invert prose-sm max-w-[85%] text-gray-200"
-                >
-                  <Markdown>{block.text}</Markdown>
-                </div>
-              )
-            }
+    <ChatContainerRoot className="min-w-0 flex-1">
+      <ChatContainerContent className="gap-5 px-5 py-4 pb-6">
+        {messages.map((msg) => (
+          <MessageRow key={msg.id} message={msg} />
+        ))}
+      </ChatContainerContent>
+      <ScrollButton />
+    </ChatContainerRoot>
+  )
+}
 
-            if (block.type === "image") {
-              return (
-                <img
-                  key={i}
-                  className="max-h-64 max-w-[80%] rounded border border-border object-contain"
-                  src={`data:${block.mimeType};base64,${block.data}`}
-                  alt="attachment"
-                />
-              )
-            }
+function MessageRow({ message }: { message: ChatMessage }) {
+  const isUser = message.role === "user"
 
-            if (block.type === "thinking") {
-              return <ThinkingBlock key={i} text={block.text} />
-            }
+  return (
+    <div className={`flex flex-col gap-2 ${isUser ? "items-end" : "items-start"}`}>
+      {message.blocks.map((block, i) => {
+        if (block.type === "text") {
+          return isUser ? (
+            <div
+              key={i}
+              className="max-w-[80%] rounded-xl border border-primary/20 bg-primary/10 px-4 py-2.5 text-sm text-foreground"
+            >
+              {block.text}
+            </div>
+          ) : (
+            <div key={i} className="w-full">
+              <Markdown>{block.text}</Markdown>
+            </div>
+          )
+        }
 
-            if (block.type === "tool_call") {
-              return <ToolBlock key={i} block={block} />
-            }
+        if (block.type === "image") {
+          return (
+            <img
+              key={i}
+              className="max-h-64 max-w-[80%] rounded-xl border border-border object-contain"
+              src={`data:${block.mimeType};base64,${block.data}`}
+              alt="attachment"
+            />
+          )
+        }
 
-            return null
-          })}
-        </div>
-      ))}
-      <div ref={bottomRef} />
+        if (block.type === "thinking") {
+          return <ThinkingBlockRow key={i} text={block.text} />
+        }
+
+        if (block.type === "tool_call") {
+          return <Tool key={i} block={block} />
+        }
+
+        return null
+      })}
     </div>
   )
 }
 
-function ThinkingBlock({ text }: { text: string }) {
-  const [collapsed, setCollapsed] = useState(true)
+function ThinkingBlockRow({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
 
   return (
-    <div className="max-w-[85%] rounded border border-border bg-panel/50 text-xs">
+    <div className="w-full border-l-2 border-border pl-3">
       <button
-        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-gray-500 hover:text-gray-400"
-        onClick={() => setCollapsed((c) => !c)}
+        type="button"
+        className="flex w-full items-center gap-2 py-1 text-left transition-opacity hover:opacity-80"
+        onClick={() => setOpen((o) => !o)}
       >
-        <span>💭 Thinking</span>
-        <span className="ml-auto">{collapsed ? "▸" : "▾"}</span>
+        <TextShimmer className="text-sm font-medium">Thinking</TextShimmer>
+        {open
+          ? <ChevronDownIcon className="ml-auto size-4 text-muted-foreground" />
+          : <ChevronRightIcon className="ml-auto size-4 text-muted-foreground" />}
       </button>
-      {!collapsed && (
-        <div className="border-t border-border px-3 py-2 text-gray-500 whitespace-pre-wrap">
+      {open && (
+        <div className="whitespace-pre-wrap pb-2 pt-1 text-xs text-muted-foreground">
           {text}
         </div>
       )}

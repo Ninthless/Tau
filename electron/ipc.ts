@@ -1,4 +1,4 @@
-import { ipcMain } from "electron"
+import { BrowserWindow, dialog, ipcMain } from "electron"
 import Store from "electron-store"
 import * as agent from "./agent"
 import type { AppSettings, ThinkingLevel } from "../src/types"
@@ -33,6 +33,15 @@ export function registerIpcHandlers() {
   ipcMain.handle("agent:switchSession", (_e, { path }) => agent.switchSession(path))
   ipcMain.handle("agent:fork", (_e, { entryId }) => agent.fork(entryId))
   ipcMain.handle("agent:listSessions", (_e, { cwd }) => agent.listSessions(cwd))
+  ipcMain.handle("agent:listAllSessions", () => agent.listAllSessions())
+  ipcMain.handle("agent:deleteSession", (_e, { path }) => agent.deleteSession(path))
+  ipcMain.handle("app:selectDirectory", async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender) ?? undefined
+    const result = win
+      ? await dialog.showOpenDialog(win, { properties: ["openDirectory"] })
+      : await dialog.showOpenDialog({ properties: ["openDirectory"] })
+    return result.canceled ? null : result.filePaths[0] ?? null
+  })
   ipcMain.handle("agent:setModel", async (_e, { provider, modelId }) => {
     const ok = await agent.setModel(provider, modelId)
     return { ok }
@@ -62,5 +71,20 @@ export function registerIpcHandlers() {
   ipcMain.handle("settings:set", (_e, partial: Partial<Omit<AppSettings, "apiKeys">>) => {
     const current = store.get("settings")
     store.set("settings", { ...current, ...partial })
+  })
+
+  ipcMain.handle("win:minimize", (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.minimize()
+  })
+  ipcMain.handle("win:maximize", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return
+    win.isMaximized() ? win.unmaximize() : win.maximize()
+  })
+  ipcMain.handle("win:close", (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.close()
+  })
+  ipcMain.handle("win:isMaximized", (event) => {
+    return BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false
   })
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import type { AgentState, ChatMessage, MessageBlock, ThinkingLevel, ToolCallBlock } from "../types"
+import type { AgentState, ChatMessage, ImageAttachment, MessageBlock, ThinkingLevel, ToolCallBlock } from "../types"
 
 const INITIAL_STATE: AgentState = {
   isStreaming: false,
@@ -165,7 +165,7 @@ export function useAgent() {
     }
   }, [loadMessages])
 
-  const sendPrompt = useCallback(async (text: string, images?: unknown[]) => {
+  const sendPrompt = useCallback(async (text: string, images?: ImageAttachment[]) => {
     setMessages((prev) => [
       ...prev,
       {
@@ -173,7 +173,7 @@ export function useAgent() {
         role: "user",
         blocks: [
           { type: "text", text },
-          ...((images as Array<{ data: string; mimeType: string }> | undefined)?.map((image) => ({
+          ...(images?.map((image) => ({
             type: "image" as const,
             data: image.data,
             mimeType: image.mimeType,

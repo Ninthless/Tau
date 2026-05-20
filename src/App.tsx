@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react"
 import { ChatView } from "./components/ChatView"
 import { Sidebar } from "./components/Sidebar"
-import { SettingsModal } from "./components/SettingsModal"
+import { SettingsPage } from "./components/SettingsPage"
+import { TitleBar } from "./components/TitleBar"
+import { TooltipProvider } from "@/components/ui/tooltip"
 
 export default function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [currentSessionId, setCurrentSessionId] = useState("")
   const [sidebarCwd, setSidebarCwd] = useState<string | undefined>(undefined)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   useEffect(() => {
     window.piAgent.getState().then((s) => setCurrentSessionId(s.sessionId)).catch(() => {})
@@ -22,36 +25,34 @@ export default function App() {
     await window.piAgent.switchSession(path)
   }
 
-  const handleSettingsClose = (savedCwd?: string) => {
+  const handleSettingsBack = () => {
     setShowSettings(false)
-    if (savedCwd) setSidebarCwd(savedCwd)
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-surface text-gray-200">
-      <Sidebar
-        onNewSession={handleNewSession}
-        onSwitchSession={handleSwitchSession}
-        currentSessionId={currentSessionId}
-        externalCwd={sidebarCwd}
-      />
+    <TooltipProvider delayDuration={500}>
+      <div className="dark isolate flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
+        <TitleBar sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen((v) => !v)} />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex items-center justify-between border-b border-border px-4 py-2">
-          <span className="font-semibold text-gray-300">Tau</span>
-          <button
-            className="rounded p-1.5 text-gray-500 hover:bg-white/10 hover:text-gray-300"
-            title="Settings"
-            onClick={() => setShowSettings(true)}
-          >
-            ⚙
-          </button>
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          {showSettings ? (
+            <SettingsPage onBack={handleSettingsBack} sidebarOpen={sidebarOpen} />
+          ) : (
+            <>
+              {sidebarOpen && (
+                <Sidebar
+                  onNewSession={handleNewSession}
+                  onSwitchSession={handleSwitchSession}
+                  onOpenSettings={() => setShowSettings(true)}
+                  currentSessionId={currentSessionId}
+                  externalCwd={sidebarCwd}
+                />
+              )}
+              <ChatView />
+            </>
+          )}
         </div>
-
-        <ChatView />
       </div>
-
-      {showSettings && <SettingsModal onClose={handleSettingsClose} />}
-    </div>
+    </TooltipProvider>
   )
 }

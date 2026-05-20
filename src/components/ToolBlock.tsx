@@ -1,5 +1,7 @@
 import { useState } from "react"
 import type { ToolCallBlock } from "../types"
+import { cn } from "@/lib/utils"
+import { CheckIcon, ChevronDownIcon, ChevronRightIcon, LoaderCircleIcon, XIcon } from "lucide-react"
 
 interface Props {
   block: ToolCallBlock
@@ -8,15 +10,15 @@ interface Props {
 export function ToolBlock({ block }: Props) {
   const [collapsed, setCollapsed] = useState(block.collapsed)
 
-  const statusColor =
+  const statusText =
     block.status === "running"
-      ? "text-yellow-400"
+      ? "text-warning-foreground"
       : block.status === "error"
-      ? "text-red-400"
-      : "text-green-400"
+      ? "text-destructive-foreground"
+      : "text-success-foreground"
 
-  const statusIcon =
-    block.status === "running" ? "⟳" : block.status === "error" ? "✗" : "✓"
+  const StatusIcon =
+    block.status === "running" ? LoaderCircleIcon : block.status === "error" ? XIcon : CheckIcon
 
   const argsPreview = Object.entries(block.args)
     .slice(0, 2)
@@ -24,24 +26,35 @@ export function ToolBlock({ block }: Props) {
     .join(" ")
 
   return (
-    <div className="my-1 rounded border border-border bg-panel text-xs font-mono">
+    <div className="my-1 max-w-[86%] rounded-lg border border-border bg-card text-xs font-mono">
       <button
-        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-white/5"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-accent"
         onClick={() => setCollapsed((c) => !c)}
+        aria-label={collapsed ? "Show tool result" : "Hide tool result"}
       >
-        <span className={statusColor}>{statusIcon}</span>
-        <span className="font-semibold text-accent">{block.label}</span>
+        <span className={cn("flex shrink-0 items-center gap-1.5", statusText)}>
+          <StatusIcon
+            className={cn("size-3", block.status === "running" && "animate-spin")}
+            aria-hidden="true"
+          />
+          {block.status}
+        </span>
+        <span className="font-semibold text-primary">{block.label}</span>
         {argsPreview && (
-          <span className="truncate text-gray-500">{argsPreview}</span>
+          <span className="truncate text-muted-foreground">{argsPreview}</span>
         )}
-        <span className="ml-auto text-gray-600">{collapsed ? "▸" : "▾"}</span>
+        <span className="ml-auto shrink-0 text-muted-foreground">
+          {collapsed
+            ? <ChevronRightIcon className="size-3" aria-hidden="true" />
+            : <ChevronDownIcon className="size-3" aria-hidden="true" />}
+        </span>
       </button>
 
       {!collapsed && (block.result !== undefined || block.partialResult) && (
-        <div className="max-h-48 overflow-y-auto border-t border-border px-3 py-2 text-gray-400 whitespace-pre-wrap">
+        <div className="max-h-48 overflow-y-auto whitespace-pre-wrap border-t border-border px-3 py-2 text-muted-foreground">
           {(block.result ?? block.partialResult ?? "").slice(0, 2000)}
           {(block.result ?? block.partialResult ?? "").length > 2000 && (
-            <span className="text-gray-600"> …truncated</span>
+            <span className="text-muted-foreground/50"> …truncated</span>
           )}
         </div>
       )}

@@ -83,6 +83,7 @@ export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhi
 export interface AppSettings {
   apiKeys: Record<string, string>
   defaultCwd: string
+  projectCwds?: string[]
   defaultProvider?: string
   defaultModel?: string
   defaultThinkingLevel?: ThinkingLevel
@@ -208,6 +209,9 @@ declare global {
       exportSessionHtml: () => Promise<string>
       reloadSession: () => Promise<void>
       listSessions: (cwd: string) => Promise<SessionInfo[]>
+      listAllSessions: () => Promise<SessionInfo[]>
+      deleteSession: (path: string) => Promise<void>
+      selectDirectory: () => Promise<string | null>
       setModel: (provider: string, modelId: string) => Promise<{ ok: boolean }>
       getModels: () => Promise<AvailableModel[]>
       getAuthProviders: () => Promise<AuthProviderInfo[]>
@@ -229,6 +233,13 @@ declare global {
       onEvent: (cb: (event: unknown) => void) => () => void
       onStateChange: (cb: (state: AgentState) => void) => () => void
       onPackageProgress: (cb: (event: PiPackageProgress) => void) => () => void
+    }
+    winControls: {
+      minimize: () => Promise<void>
+      maximize: () => Promise<void>
+      close: () => Promise<void>
+      isMaximized: () => Promise<boolean>
+      onMaximizeChange: (cb: (isMaximized: boolean) => void) => () => void
     }
   }
 }

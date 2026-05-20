@@ -1,324 +1,308 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MessageList } from "./MessageList"
 import { useAgent } from "../hooks/useAgent"
-import type { ImageAttachment, SessionStats, SessionTreeItem, ToolInfo } from "../types"
+import type { ImageAttachment, ToolInfo } from "../types"
+import { cn } from "@/lib/utils"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  PromptInput,
+  PromptInputTextarea,
+} from "./prompt-kit/prompt-input"
+import { Loader } from "./prompt-kit/loader"
+import {
+  ArrowUpIcon, AtSignIcon, DownloadIcon, GitForkIcon,
+  GlobeIcon, ImageIcon, ListTreeIcon, MessageSquareTextIcon,
+  PackageIcon, PaperclipIcon, PencilLineIcon, RefreshCwIcon,
+  SquareIcon, WrenchIcon, XIcon,
+} from "lucide-react"
 
 type SendMode = "prompt" | "steer" | "followUp"
 
+type CmdItem = {
+  id: string
+  label: string
+  hint: string
+  icon: React.ElementType
+  action: () => void
+}
+
 export function ChatView() {
-  const { messages, agentState, sendPrompt, sendSteer, sendFollowUp, abort, compact, cycleThinkingLevel } = useAgent()
+  const {
+    messages, agentState,
+    sendPrompt, sendSteer, sendFollowUp,
+    abort, compact, cycleThinkingLevel,
+  } = useAgent()
+
   const [input, setInput] = useState("")
   const [sendMode, setSendMode] = useState<SendMode>("prompt")
-  const [attachments, setAttachments] = useState<ImageAttachment[]>([])
-  const [commands, setCommands] = useState<ToolInfo[]>([])
-  const [forkTargets, setForkTargets] = useState<SessionTreeItem[]>([])
-  const [stats, setStats] = useState<SessionStats | null>(null)
-  const [panel, setPanel] = useState<"none" | "commands" | "fork" | "session">("none")
-  const [sessionName, setSessionName] = useState("")
-  const [status, setStatus] = useState<string | null>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const [cmdOpen, setCmdOpen] = useState(false)
+  const [cmdQuery, setCmdQuery] = useState("")
+  const [cmdIndex, setCmdIndex] = useState(0)
+  const [images, setImages] = useState<ImageAttachment[]>([])
+  const [tools, setTools] = useState<ToolInfo[]>([])
 
-  const refreshMeta = useCallback(async () => {
-    const [nextStats, nextCommands, nextForkTargets] = await Promise.all([
-      window.piAgent.getSessionStats(),
-      window.piAgent.getTools(),
-      window.piAgent.getSessionTree(),
-    ])
-    setStats(nextStats)
-    setCommands(nextCommands)
-    setForkTargets(nextForkTargets)
-    setSessionName(nextStats?.sessionName ?? "")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    window.piAgent.getTools().then(setTools).catch(() => {})
+  }, [])
+
+  const builtinCmds = useMemo<CmdItem[]>(() => [
+    { id: "steer", label: "Steer", hint: "Inject a steering message mid-run", icon: PencilLineIcon, action: () => { setSendMode("steer"); setCmdOpen(false); setInput("") } },
+    { id: "followup", label: "Follow Up", hint: "Send a follow-up after the agent finishes", icon: MessageSquareTextIcon, action: () => { setSendMode("followUp"); setCmdOpen(false); setInput("") } },
+    { id: "prompt", label: "Prompt", hint: "Send as a new prompt (default)", icon: ArrowUpIcon, action: () => { setSendMode("prompt"); setCmdOpen(false); setInput("") } },
+    { id: "compact", label: "Compact", hint: "Compact conversation history", icon: PackageIcon, action: () => { compact(); setCmdOpen(false); setInput("") } },
+    { id: "fork", label: "Fork", hint: "Fork from a session entry", icon: GitForkIcon, action: () => { setCmdOpen(false); setInput("") } },
+    { id: "session", label: "Session Tree", hint: "Browse the session message tree", icon: ListTreeIcon, action: () => { setCmdOpen(false); setInput("") } },
+    { id: "think", label: "Thinking Level", hint: `Cycle thinking level (current: ${agentState.thinkingLevel})`, icon: GlobeIcon, action: () => { cycleThinkingLevel(); setCmdOpen(false); setInput("") } },
+    {
+      id: "export", label: "Export", hint: "Export session as HTML", icon: DownloadIcon,
+      action: async () => {
+        const html = await window.piAgent.exportSessionHtml()
+        const blob = new Blob([html], { type: "text/html" })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url; a.download = "session.html"; a.click()
+        URL.revokeObjectURL(url)
+        setCmdOpen(false); setInput("")
+      },
+    },
+    { id: "reload", label: "Reload", hint: "Reload current session", icon: RefreshCwIcon, action: () => { window.piAgent.reloadSession(); setCmdOpen(false); setInput("") } },
+  ], [agentState.thinkingLevel, compact, cycleThinkingLevel])
+
+  const toolCmds = useMemo<CmdItem[]>(() => tools.map((t) => ({
+    id: `tool:${t.name}`,
+    label: t.name,
+    hint: t.description,
+    icon: WrenchIcon,
+    action: () => {
+      const next = t.active
+        ? tools.filter((x) => x.name !== t.name).map((x) => x.name)
+        : [...tools.map((x) => x.name), t.name]
+      window.piAgent.setActiveTools(next)
+      setCmdOpen(false); setInput("")
+    },
+  })), [tools])
+
+  const allCmds = useMemo(() => [...builtinCmds, ...toolCmds], [builtinCmds, toolCmds])
+
+  const filteredCmds = useMemo(() => {
+    if (!cmdQuery) return allCmds
+    const q = cmdQuery.toLowerCase()
+    return allCmds.filter((c) => c.label.toLowerCase().includes(q) || c.hint.toLowerCase().includes(q))
+  }, [allCmds, cmdQuery])
+
+  const handleValueChange = useCallback((val: string) => {
+    setInput(val)
+    if (val.startsWith("/")) {
+      setCmdOpen(true); setCmdQuery(val.slice(1)); setCmdIndex(0)
+    } else {
+      setCmdOpen(false); setCmdQuery("")
+    }
   }, [])
 
   const handleSend = useCallback(async () => {
     const text = input.trim()
-    if (!text && attachments.length === 0) return
+    if (!text || agentState.isStreaming || cmdOpen) return
     setInput("")
-    setAttachments([])
-    if (sendMode === "steer") {
-      await sendSteer(text)
-    } else if (sendMode === "followUp") {
-      await sendFollowUp(text)
-    } else {
-      await sendPrompt(text, attachments)
+    if (sendMode === "steer") { await sendSteer(text); setSendMode("prompt") }
+    else if (sendMode === "followUp") { await sendFollowUp(text); setSendMode("prompt") }
+    else { await sendPrompt(text, images.length ? images : undefined); setImages([]) }
+  }, [input, agentState.isStreaming, cmdOpen, sendMode, images, sendPrompt, sendSteer, sendFollowUp])
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (cmdOpen) {
+      if (e.key === "ArrowDown") { e.preventDefault(); setCmdIndex((i) => Math.min(i + 1, filteredCmds.length - 1)) }
+      else if (e.key === "ArrowUp") { e.preventDefault(); setCmdIndex((i) => Math.max(i - 1, 0)) }
+      else if (e.key === "Enter") { e.preventDefault(); filteredCmds[cmdIndex]?.action() }
+      else if (e.key === "Escape") { e.preventDefault(); setCmdOpen(false); setInput("") }
     }
-    refreshMeta().catch(() => {})
-  }, [attachments, input, refreshMeta, sendMode, sendPrompt, sendSteer, sendFollowUp])
+  }, [cmdOpen, filteredCmds, cmdIndex])
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
+  const handleImageAttach = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    Array.from(e.target.files ?? []).forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        const data = (ev.target?.result as string).split(",")[1]
+        setImages((prev) => [...prev, { name: file.name, data, mimeType: file.type }])
+      }
+      reader.readAsDataURL(file)
+    })
+    e.target.value = ""
+  }, [])
+
+  const thinkingLabel: Record<string, string> = {
+    off: "No thinking",
+    minimal: "Minimal",
+    low: "Low thinking",
+    medium: "Medium thinking",
+    high: "High thinking",
+    xhigh: "Max thinking",
   }
 
-  useEffect(() => {
-    if (!agentState.isStreaming) textareaRef.current?.focus()
-  }, [agentState.isStreaming])
-
-  useEffect(() => {
-    refreshMeta().catch(() => {})
-  }, [agentState.sessionId, agentState.isStreaming, refreshMeta])
-
-  const addFiles = async (files: FileList | null) => {
-    if (!files) return
-    const images = await Promise.all(
-      Array.from(files)
-        .filter((file) => file.type.startsWith("image/"))
-        .map(async (file) => ({
-          name: file.name,
-          mimeType: file.type,
-          data: await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "")
-            reader.onerror = () => reject(reader.error)
-            reader.readAsDataURL(file)
-          }),
-        }))
-    )
-    setAttachments((prev) => [...prev, ...images])
-    if (fileRef.current) fileRef.current.value = ""
-  }
-
-  const saveSessionName = async () => {
-    await window.piAgent.setSessionName(sessionName)
-    await refreshMeta()
-  }
-
-  const exportHtml = async () => {
-    const path = await window.piAgent.exportSessionHtml()
-    setStatus(`Exported ${path}`)
-  }
-
-  const reloadSession = async () => {
-    await window.piAgent.reloadSession()
-    await refreshMeta()
-    setStatus("Reloaded resources")
-  }
-
-  const modelLabel = agentState.model
-    ? `${agentState.model.name} (${agentState.model.provider})`
-    : "No model"
-
-  const canSend = (!!input.trim() || attachments.length > 0) && (sendMode !== "prompt" || !agentState.isStreaming)
-
-  const queueBadge = agentState.queuedSteering
-    ? { label: "Steer queued", color: "text-orange-400" }
-    : agentState.queuedFollowUp
-    ? { label: "Follow-up queued", color: "text-blue-400" }
-    : null
+  const statusText = agentState.isCompacting ? "Compacting" : agentState.isRetrying ? "Retrying" : agentState.isStreaming ? "Running" : null
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex items-center gap-3 border-b border-border px-4 py-2">
-        <span className="text-xs text-gray-500 truncate">{modelLabel}</span>
-        {stats && (
-          <span className="hidden text-xs text-gray-600 md:inline">
-            {stats.totalMessages} msgs · {stats.tokens.total} tok · ${stats.cost.toFixed(4)}
-          </span>
-        )}
-        <button
-          className="ml-auto rounded px-2 py-0.5 text-xs text-gray-500 hover:bg-white/10 hover:text-gray-300"
-          title="Cycle thinking level"
-          onClick={cycleThinkingLevel}
-        >
-          💭 {agentState.thinkingLevel}
-        </button>
-        {agentState.isCompacting && (
-          <span className="text-xs text-purple-400">Compacting…</span>
-        )}
-        {agentState.isRetrying && (
-          <span className="text-xs text-orange-400">Retrying…</span>
-        )}
-        {agentState.isStreaming && (
-          <span className="flex items-center gap-1.5 text-xs text-yellow-400">
-            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-yellow-400" />
-            Running
-          </span>
-        )}
-        {queueBadge && (
-          <span className={`text-xs ${queueBadge.color}`}>{queueBadge.label}</span>
-        )}
-        <button
-          className="rounded px-2 py-0.5 text-xs text-gray-600 hover:bg-white/10 hover:text-gray-400"
-          title="Session"
-          onClick={() => setPanel((value) => value === "session" ? "none" : "session")}
-        >
-          session
-        </button>
-        <button
-          className="rounded px-2 py-0.5 text-xs text-gray-600 hover:bg-white/10 hover:text-gray-400"
-          title="Commands"
-          onClick={() => setPanel((value) => value === "commands" ? "none" : "commands")}
-        >
-          commands
-        </button>
-        <button
-          className="rounded px-2 py-0.5 text-xs text-gray-600 hover:bg-white/10 hover:text-gray-400"
-          title="Fork from a previous user message"
-          onClick={() => setPanel((value) => value === "fork" ? "none" : "fork")}
-        >
-          fork
-        </button>
-        <button
-          className="rounded px-2 py-0.5 text-xs text-gray-600 hover:bg-white/10 hover:text-gray-400"
-          title="Compact context"
-          onClick={() => compact()}
-        >
-          ⊡ compact
-        </button>
-      </div>
-
-      {panel !== "none" && (
-        <div className="max-h-52 overflow-y-auto border-b border-border bg-panel/70 px-4 py-3">
-          {panel === "session" && (
-            <div className="grid gap-3 text-xs md:grid-cols-[1fr_auto_auto]">
-              <input
-                className="rounded bg-surface px-3 py-1.5 text-gray-300 outline-none focus:ring-1 focus:ring-accent/50"
-                placeholder="Session name"
-                value={sessionName}
-                onChange={(e) => setSessionName(e.target.value)}
-              />
-              <button className="rounded bg-accent px-3 py-1.5 text-white hover:bg-accent/80" onClick={saveSessionName}>Save name</button>
-              <button className="rounded bg-surface px-3 py-1.5 text-gray-300 hover:bg-white/10" onClick={exportHtml}>Export HTML</button>
-              <button className="rounded bg-surface px-3 py-1.5 text-gray-300 hover:bg-white/10" onClick={reloadSession}>Reload resources</button>
-              {status && <span className="self-center truncate text-gray-500 md:col-span-2">{status}</span>}
-            </div>
-          )}
-          {panel === "commands" && (
-            <div className="grid gap-2 md:grid-cols-2">
-              {commands.map((tool) => (
-                <button
-                  key={tool.name}
-                  className="rounded border border-border bg-surface px-3 py-2 text-left text-xs text-gray-400 hover:bg-white/5"
-                  onClick={() => setInput(tool.name)}
-                  title={tool.description}
-                >
-                  <div className="font-medium">{tool.name}</div>
-                  <div className="truncate text-[10px] text-gray-600">{tool.source}</div>
-                </button>
-              ))}
-              {commands.length === 0 && (
-                <div className="text-xs text-gray-600">No RPC commands available</div>
-              )}
-            </div>
-          )}
-          {panel === "fork" && (
-            <div className="space-y-1">
-              {forkTargets.map((item) => (
-                <button
-                  key={item.id}
-                  className={`flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs hover:bg-white/5 ${item.active ? "text-accent" : "text-gray-400"}`}
-                  style={{ paddingLeft: `${8 + item.depth * 14}px` }}
-                  onClick={async () => { await window.piAgent.navigateTree(item.id); await refreshMeta() }}
-                  title={item.title}
-                >
-                  <span className="w-20 shrink-0 text-[10px] text-gray-600">{item.type}</span>
-                  <span className="truncate">{item.title}</span>
-                </button>
-              ))}
-              {forkTargets.length === 0 && (
-                <div className="text-xs text-gray-600">No previous user messages to fork from</div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
       <MessageList messages={messages} />
 
-      <div className="border-t border-border p-3 space-y-2">
-        <div className="flex gap-1">
-          {(["prompt", "steer", "followUp"] as SendMode[]).map((mode) => (
-            <button
-              key={mode}
-              className={`rounded px-2 py-0.5 text-xs ${
-                sendMode === mode
-                  ? "bg-accent text-white"
-                  : "text-gray-500 hover:bg-white/10 hover:text-gray-300"
-              }`}
-              onClick={() => setSendMode(mode)}
-            >
-              {mode === "prompt" ? "Prompt" : mode === "steer" ? "Steer" : "Follow-up"}
-            </button>
-          ))}
-          <span className="ml-2 text-xs text-gray-600 self-center">
-            {sendMode === "steer"
-              ? "Replaces current direction mid-run"
-              : sendMode === "followUp"
-              ? "Queued until agent stops"
-              : ""}
-          </span>
-        </div>
-
-        {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {attachments.map((image, index) => (
-              <button
-                key={`${image.name}-${index}`}
-                className="flex items-center gap-2 rounded border border-border bg-panel px-2 py-1 text-xs text-gray-400 hover:bg-white/5"
-                onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== index))}
-                title="Remove attachment"
-              >
-                <img className="h-8 w-8 rounded object-cover" src={`data:${image.mimeType};base64,${image.data}`} alt="" />
-                <span className="max-w-32 truncate">{image.name}</span>
-              </button>
-            ))}
+      <div className="relative shrink-0 px-4 pb-5">
+        <div className="pointer-events-none absolute inset-x-0 -top-10 h-10 bg-gradient-to-b from-transparent to-background" />
+        {cmdOpen && filteredCmds.length > 0 && (
+          <div className="mb-2 overflow-hidden rounded-xl border bg-popover shadow-lg">
+            <div className="max-h-64 overflow-y-auto py-1">
+              {filteredCmds.map((cmd, i) => (
+                <button
+                  key={cmd.id}
+                  type="button"
+                  className={cn(
+                    "flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors",
+                    i === cmdIndex ? "bg-accent text-accent-foreground" : "text-popover-foreground hover:bg-accent/50"
+                  )}
+                  onMouseEnter={() => setCmdIndex(i)}
+                  onClick={cmd.action}
+                >
+                  <cmd.icon className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="font-medium">{cmd.label}</span>
+                  <span className="ml-auto truncate text-xs text-muted-foreground">{cmd.hint}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-        <div className="flex gap-2">
-          <textarea
-            ref={textareaRef}
-            className="flex-1 resize-none rounded-lg bg-panel px-3 py-2 text-sm text-gray-200 placeholder-gray-600 outline-none focus:ring-1 focus:ring-accent/50 disabled:opacity-50"
-            placeholder={
-              sendMode === "steer"
-                ? "Steer the agent mid-run…"
-                : sendMode === "followUp"
-                ? "Queue a follow-up…"
-                : "Message Tau… (Enter to send, Shift+Enter for newline)"
-            }
-            rows={3}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={sendMode === "prompt" && agentState.isStreaming}
-          />
-          <div className="flex flex-col gap-2">
-            <input
-              ref={fileRef}
-              className="hidden"
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(e) => addFiles(e.target.files)}
-            />
+        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageAttach} />
+
+        <PromptInput
+          value={input}
+          onValueChange={handleValueChange}
+          onSubmit={handleSend}
+          isLoading={agentState.isStreaming}
+          className="p-0 shadow-xl"
+        >
+          <div className="flex flex-wrap items-center gap-1.5 px-3 pt-3">
             <button
-              className="rounded-lg bg-panel px-3 py-2 text-xs font-medium text-gray-400 hover:bg-white/10"
-              onClick={() => fileRef.current?.click()}
-              title="Attach images"
+              type="button"
+              className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+              onClick={() => fileInputRef.current?.click()}
             >
-              Image
+              <AtSignIcon className="size-3" />
+              Add context
             </button>
-            {agentState.isStreaming && sendMode === "prompt" ? (
+
+            {images.map((img, i) => (
+              <div key={i} className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground">
+                <ImageIcon className="size-3 shrink-0" />
+                <span className="max-w-28 truncate">{img.name}</span>
+                <button
+                  type="button"
+                  className="ml-0.5 transition-colors hover:text-foreground"
+                  onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
+                >
+                  <XIcon className="size-2.5" />
+                </button>
+              </div>
+            ))}
+
+            {sendMode !== "prompt" && (
+              <div className={cn(
+                "flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium",
+                sendMode === "steer" ? "border-warning/40 text-warning" : "border-info/40 text-info"
+              )}>
+                {sendMode === "steer" ? "Steer" : "Follow Up"}
+                <button
+                  type="button"
+                  className="ml-0.5 opacity-60 transition-opacity hover:opacity-100"
+                  onClick={() => setSendMode("prompt")}
+                >
+                  <XIcon className="size-2.5" />
+                </button>
+              </div>
+            )}
+
+            {statusText && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Loader variant="dots" size="sm" />
+                <span>{statusText}…</span>
+              </div>
+            )}
+          </div>
+
+          <PromptInputTextarea
+            placeholder={
+              sendMode === "steer" ? "Steer the agent…"
+              : sendMode === "followUp" ? "Follow up…"
+              : "Ask, search, or make anything… (/ for commands)"
+            }
+            onKeyDown={handleKeyDown}
+            className="min-h-[52px] px-3 py-2"
+          />
+
+          <div className="flex items-center justify-between px-3 pb-3 pt-1">
+            <div className="flex items-center gap-4 text-muted-foreground">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex items-center transition-colors hover:text-foreground"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <PaperclipIcon className="size-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Attach image</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-xs transition-colors hover:text-foreground"
+                    onClick={() => cycleThinkingLevel()}
+                  >
+                    {thinkingLabel[agentState.thinkingLevel] ?? "Auto"}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Thinking: {agentState.thinkingLevel}</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1.5 text-xs transition-colors hover:text-foreground"
+                  >
+                    <GlobeIcon className="size-3.5" />
+                    <span className="max-w-28 truncate">{agentState.model?.name ?? "All Sources"}</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">{agentState.model?.name ?? "Model"}</TooltipContent>
+              </Tooltip>
+            </div>
+
+            {agentState.isStreaming ? (
               <button
-                className="rounded-lg bg-red-600/80 px-3 py-2 text-xs font-medium text-white hover:bg-red-600"
+                type="button"
+                className="flex size-8 items-center justify-center rounded-full bg-foreground text-background transition-opacity hover:opacity-75"
                 onClick={abort}
               >
-                Stop
+                <SquareIcon className="size-3 fill-current" />
               </button>
             ) : (
               <button
-                className="rounded-lg bg-accent px-3 py-2 text-xs font-medium text-white hover:bg-accent/80 disabled:opacity-40"
+                type="button"
+                className={cn(
+                  "flex size-8 items-center justify-center rounded-full bg-foreground text-background transition-opacity",
+                  !input.trim() || cmdOpen ? "cursor-not-allowed opacity-25" : "hover:opacity-75"
+                )}
+                disabled={!input.trim() || cmdOpen}
                 onClick={handleSend}
-                disabled={!canSend}
               >
-                {sendMode === "steer" ? "Steer" : sendMode === "followUp" ? "Queue" : "Send"}
+                <ArrowUpIcon className="size-4" />
               </button>
             )}
           </div>
-        </div>
+        </PromptInput>
       </div>
     </div>
   )

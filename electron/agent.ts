@@ -229,17 +229,43 @@ export async function fork(entryId: string) {
 export async function listSessions(cwd: string): Promise<SessionInfo[]> {
   try {
     const results = await SessionManager.list(cwd)
-    return results.map((r) => ({
-      path: r.path,
-      id: r.id,
-      cwd: r.cwd,
-      created: r.created instanceof Date ? r.created.toISOString() : String(r.created),
-      modified: r.modified instanceof Date ? r.modified.toISOString() : String(r.modified),
-      messageCount: r.messageCount,
-      firstMessage: r.firstMessage ?? "",
-    }))
+    return results.map(mapSessionInfo)
   } catch {
     return []
+  }
+}
+
+export async function listAllSessions(): Promise<SessionInfo[]> {
+  try {
+    const results = await SessionManager.listAll()
+    return results.map(mapSessionInfo)
+  } catch {
+    return []
+  }
+}
+
+export async function deleteSession(path: string): Promise<void> {
+  const { unlink } = await import("node:fs/promises")
+  await unlink(path)
+}
+
+function mapSessionInfo(r: {
+  path: string
+  id: string
+  cwd: string
+  created: Date
+  modified: Date
+  messageCount: number
+  firstMessage: string
+}) {
+  return {
+    path: r.path,
+    id: r.id,
+    cwd: r.cwd,
+    created: r.created instanceof Date ? r.created.toISOString() : String(r.created),
+    modified: r.modified instanceof Date ? r.modified.toISOString() : String(r.modified),
+    messageCount: r.messageCount,
+    firstMessage: r.firstMessage ?? "",
   }
 }
 

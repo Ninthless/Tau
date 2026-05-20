@@ -3,7 +3,7 @@ import { mkdirSync, statSync, writeFileSync } from "fs"
 import { dirname, join } from "path"
 import { fileURLToPath } from "url"
 import { StringDecoder } from "string_decoder"
-import { dialog, type BrowserWindow } from "electron"
+import { dialog, BrowserWindow, type MessageBoxOptions } from "electron"
 import { tmpdir } from "os"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -104,7 +104,7 @@ export class RpcClient {
     this.queuedSteering = null
     this.queuedFollowUp = null
 
-    const child = spawn(this.findNodePath(), [piCliPath, "--mode", "rpc"], {
+    const child = spawn(this.findNodePath(), [piCliPath, "--mode", "rpc", "--continue"], {
       cwd,
       stdio: ["pipe", "pipe", "pipe"],
       env: { ...process.env },
@@ -225,14 +225,17 @@ export class RpcClient {
       return
     }
     if (method === "confirm") {
-      const result = await dialog.showMessageBox(this.win ?? undefined, {
+      const options: MessageBoxOptions = {
         type: "question",
         title: req.title ?? "Pi",
         message: req.message ?? req.title ?? "Confirm",
         buttons: ["OK", "Cancel"],
         defaultId: 0,
         cancelId: 1,
-      })
+      }
+      const result = this.win
+        ? await dialog.showMessageBox(this.win, options)
+        : await dialog.showMessageBox(options)
       this.sendRaw({ type: "extension_ui_response", id, confirmed: result.response === 0 })
     } else if (method === "select") {
       const options = req.options ?? []
@@ -240,14 +243,17 @@ export class RpcClient {
         this.sendRaw({ type: "extension_ui_response", id, cancelled: true })
         return
       }
-      const result = await dialog.showMessageBox(this.win ?? undefined, {
+      const messageBoxOptions: MessageBoxOptions = {
         type: "question",
         title: req.title ?? "Pi",
         message: req.message ?? req.title ?? "Select",
-        buttons: options,
+        buttons: [...options],
         defaultId: 0,
         cancelId: options.length - 1,
-      })
+      }
+      const result = this.win
+        ? await dialog.showMessageBox(this.win, messageBoxOptions)
+        : await dialog.showMessageBox(messageBoxOptions)
       const value = options[result.response]
       if (value) this.sendRaw({ type: "extension_ui_response", id, value })
       else this.sendRaw({ type: "extension_ui_response", id, cancelled: true })
