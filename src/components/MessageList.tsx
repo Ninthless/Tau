@@ -27,7 +27,7 @@ export function MessageList({ messages }: Props) {
 
   return (
     <ChatContainerRoot className="min-w-0 flex-1">
-      <ChatContainerContent className="gap-5 px-5 py-4 pb-6">
+      <ChatContainerContent className="gap-2 px-4 py-3 pb-4">
         {messages.map((msg) => (
           <MessageRow key={msg.id} message={msg} />
         ))}
@@ -41,13 +41,13 @@ function MessageRow({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user"
 
   return (
-    <div className={`flex flex-col gap-2 ${isUser ? "items-end" : "items-start"}`}>
+    <div className={`flex flex-col gap-1.5 ${isUser ? "items-end" : "items-start"}`}>
       {message.blocks.map((block, i) => {
         if (block.type === "text") {
           return isUser ? (
             <div
               key={i}
-              className="max-w-[80%] rounded-xl border border-primary/20 bg-primary/10 px-4 py-2.5 text-sm text-foreground"
+              className="max-w-[80%] rounded-lg border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs text-foreground"
             >
               {block.text}
             </div>
@@ -90,16 +90,16 @@ function ThinkingBlockRow({ text }: { text: string }) {
     <div className="w-full border-l-2 border-border pl-3">
       <button
         type="button"
-        className="flex w-full items-center gap-2 py-1 text-left transition-opacity hover:opacity-80"
+        className="flex w-full items-center gap-2 py-0.5 text-left transition-opacity hover:opacity-80"
         onClick={() => setOpen((o) => !o)}
       >
-        <TextShimmer className="text-sm font-medium">Thinking</TextShimmer>
+        <TextShimmer className="text-xs font-medium">Thinking</TextShimmer>
         {open
-          ? <ChevronDownIcon className="ml-auto size-4 text-muted-foreground" />
-          : <ChevronRightIcon className="ml-auto size-4 text-muted-foreground" />}
+          ? <ChevronDownIcon className="ml-auto size-3.5 text-muted-foreground" />
+          : <ChevronRightIcon className="ml-auto size-3.5 text-muted-foreground" />}
       </button>
       {open && (
-        <div className="whitespace-pre-wrap pb-2 pt-1 text-xs text-muted-foreground">
+        <div className="whitespace-pre-wrap pb-1.5 pt-0.5 text-[11px] text-muted-foreground">
           {text}
         </div>
       )}

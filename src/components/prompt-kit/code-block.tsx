@@ -11,7 +11,7 @@ function CodeBlock({ children, className, ...props }: CodeBlockProps) {
   return (
     <div
       className={cn(
-        "my-2 flex w-full flex-col overflow-clip rounded-xl border border-border",
+        "my-1 flex w-full flex-col overflow-clip rounded-lg border border-border",
         className
       )}
       {...props}
@@ -65,7 +65,7 @@ function CodeBlockCode({
   }, [code, language])
 
   const classNames = cn(
-    "w-full overflow-x-auto text-[13px] [&>pre]:px-4 [&>pre]:py-3.5 [&>pre]:leading-relaxed",
+    "w-full overflow-x-auto text-[12px] [&>pre]:px-3 [&>pre]:py-2 [&>pre]:leading-relaxed",
     className
   )
 
@@ -95,7 +95,7 @@ function CodeBlockHeader({ language, filename, children, className }: CodeBlockH
   return (
     <div
       className={cn(
-        "flex items-center gap-2 border-b border-border/50 bg-muted/40 px-4 py-1.5",
+        "flex items-center gap-2 border-b border-border/50 bg-muted/40 px-3 py-1",
         className
       )}
     >

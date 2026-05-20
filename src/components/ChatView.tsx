@@ -146,25 +146,25 @@ export function ChatView() {
     <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
       <MessageList messages={messages} />
 
-      <div className="relative shrink-0 px-4 pb-5">
+      <div className="relative shrink-0 px-3 pb-3">
         <div className="pointer-events-none absolute inset-x-0 -top-10 h-10 bg-gradient-to-b from-transparent to-background" />
         {cmdOpen && filteredCmds.length > 0 && (
-          <div className="mb-2 overflow-hidden rounded-xl border bg-popover shadow-lg">
-            <div className="max-h-64 overflow-y-auto py-1">
+          <div className="mb-1.5 overflow-hidden rounded-lg border bg-popover shadow-md">
+            <div className="max-h-52 overflow-y-auto py-0.5">
               {filteredCmds.map((cmd, i) => (
                 <button
                   key={cmd.id}
                   type="button"
                   className={cn(
-                    "flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors",
+                    "flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-xs transition-colors",
                     i === cmdIndex ? "bg-accent text-accent-foreground" : "text-popover-foreground hover:bg-accent/50"
                   )}
                   onMouseEnter={() => setCmdIndex(i)}
                   onClick={cmd.action}
                 >
-                  <cmd.icon className="size-4 shrink-0 text-muted-foreground" />
+                  <cmd.icon className="size-3.5 shrink-0 text-muted-foreground" />
                   <span className="font-medium">{cmd.label}</span>
-                  <span className="ml-auto truncate text-xs text-muted-foreground">{cmd.hint}</span>
+                  <span className="ml-auto truncate text-[11px] text-muted-foreground">{cmd.hint}</span>
                 </button>
               ))}
             </div>
@@ -180,20 +180,20 @@ export function ChatView() {
           isLoading={agentState.isStreaming}
           className="p-0 shadow-xl"
         >
-          <div className="flex flex-wrap items-center gap-1.5 px-3 pt-3">
+          <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2">
             <button
               type="button"
-              className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+              className="flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
               onClick={() => fileInputRef.current?.click()}
             >
-              <AtSignIcon className="size-3" />
+              <AtSignIcon className="size-2.5" />
               Add context
             </button>
 
             {images.map((img, i) => (
-              <div key={i} className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground">
-                <ImageIcon className="size-3 shrink-0" />
-                <span className="max-w-28 truncate">{img.name}</span>
+              <div key={i} className="flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
+                <ImageIcon className="size-2.5 shrink-0" />
+                <span className="max-w-24 truncate">{img.name}</span>
                 <button
                   type="button"
                   className="ml-0.5 transition-colors hover:text-foreground"
@@ -206,7 +206,7 @@ export function ChatView() {
 
             {sendMode !== "prompt" && (
               <div className={cn(
-                "flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium",
+                "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
                 sendMode === "steer" ? "border-warning/40 text-warning" : "border-info/40 text-info"
               )}>
                 {sendMode === "steer" ? "Steer" : "Follow Up"}
@@ -221,7 +221,7 @@ export function ChatView() {
             )}
 
             {statusText && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                 <Loader variant="dots" size="sm" />
                 <span>{statusText}…</span>
               </div>
@@ -235,11 +235,11 @@ export function ChatView() {
               : "Ask, search, or make anything… (/ for commands)"
             }
             onKeyDown={handleKeyDown}
-            className="min-h-[52px] px-3 py-2"
+            className="min-h-[44px] px-3 py-1.5"
           />
 
-          <div className="flex items-center justify-between px-3 pb-3 pt-1">
-            <div className="flex items-center gap-4 text-muted-foreground">
+          <div className="flex items-center justify-between px-3 pb-2 pt-1">
+            <div className="flex items-center gap-3 text-muted-foreground">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -247,7 +247,7 @@ export function ChatView() {
                     className="flex items-center transition-colors hover:text-foreground"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    <PaperclipIcon className="size-4" />
+                    <PaperclipIcon className="size-3.5" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top">Attach image</TooltipContent>
@@ -257,7 +257,7 @@ export function ChatView() {
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="text-xs transition-colors hover:text-foreground"
+                    className="text-[11px] transition-colors hover:text-foreground"
                     onClick={() => cycleThinkingLevel()}
                   >
                     {thinkingLabel[agentState.thinkingLevel] ?? "Auto"}
@@ -270,10 +270,10 @@ export function ChatView() {
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="flex items-center gap-1.5 text-xs transition-colors hover:text-foreground"
+                    className="flex items-center gap-1 text-[11px] transition-colors hover:text-foreground"
                   >
-                    <GlobeIcon className="size-3.5" />
-                    <span className="max-w-28 truncate">{agentState.model?.name ?? "All Sources"}</span>
+                    <GlobeIcon className="size-3" />
+                    <span className="max-w-24 truncate">{agentState.model?.name ?? "All Sources"}</span>
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top">{agentState.model?.name ?? "Model"}</TooltipContent>
@@ -283,22 +283,22 @@ export function ChatView() {
             {agentState.isStreaming ? (
               <button
                 type="button"
-                className="flex size-8 items-center justify-center rounded-full bg-foreground text-background transition-opacity hover:opacity-75"
+                className="flex size-7 items-center justify-center rounded-full bg-foreground text-background transition-opacity hover:opacity-75"
                 onClick={abort}
               >
-                <SquareIcon className="size-3 fill-current" />
+                <SquareIcon className="size-2.5 fill-current" />
               </button>
             ) : (
               <button
                 type="button"
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-full bg-foreground text-background transition-opacity",
+                  "flex size-7 items-center justify-center rounded-full bg-foreground text-background transition-opacity",
                   !input.trim() || cmdOpen ? "cursor-not-allowed opacity-25" : "hover:opacity-75"
                 )}
                 disabled={!input.trim() || cmdOpen}
                 onClick={handleSend}
               >
-                <ArrowUpIcon className="size-4" />
+                <ArrowUpIcon className="size-3.5" />
               </button>
             )}
           </div>

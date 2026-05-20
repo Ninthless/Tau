@@ -42,7 +42,7 @@ export function Tool({ block }: ToolProps) {
     <div className="w-full border-l-2 border-border pl-3 text-xs">
       <button
         type="button"
-        className="flex w-full items-center gap-2.5 py-1.5 text-left transition-opacity hover:opacity-80"
+        className="flex w-full items-center gap-2.5 py-1 text-left transition-opacity hover:opacity-80"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
       >
@@ -62,10 +62,10 @@ export function Tool({ block }: ToolProps) {
       </button>
 
       {open && (
-        <div className="pb-2 pt-1">
+        <div className="pb-1.5 pt-0.5">
           {Object.keys(block.args).length > 0 && (
-            <div className="mb-2">
-              <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">Input</div>
+            <div className="mb-1.5">
+              <div className="mb-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">Input</div>
               <div className="space-y-0.5 font-mono">
                 {Object.entries(block.args).map(([k, v]) => (
                   <div key={k} className="flex gap-2">
@@ -81,8 +81,8 @@ export function Tool({ block }: ToolProps) {
 
           {resultText && (
             <div>
-              <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">Output</div>
-              <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words font-mono text-muted-foreground/80">
+              <div className="mb-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">Output</div>
+              <pre className="max-h-32 overflow-y-auto whitespace-pre-wrap break-words font-mono text-muted-foreground/80">
                 {resultText.slice(0, 2000)}
                 {resultText.length > 2000 && (
                   <span className="text-muted-foreground/40"> …truncated</span>

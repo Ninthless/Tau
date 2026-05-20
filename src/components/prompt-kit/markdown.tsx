@@ -26,7 +26,7 @@ const DEFAULT_COMPONENTS: Partial<Components> = {
     if (isInline) {
       return (
         <code
-          className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em]"
+          className="rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]"
           {...props}
         >
           {children}
@@ -45,15 +45,15 @@ const DEFAULT_COMPONENTS: Partial<Components> = {
     )
   },
   pre: ({ children }) => <>{children}</>,
-  p: ({ children }) => <p className="mb-3 last:mb-0 leading-7">{children}</p>,
-  ul: ({ children }) => <ul className="mb-3 ml-5 list-disc space-y-1">{children}</ul>,
-  ol: ({ children }) => <ol className="mb-3 ml-5 list-decimal space-y-1">{children}</ol>,
-  li: ({ children }) => <li className="leading-7">{children}</li>,
-  h1: ({ children }) => <h1 className="mb-3 mt-4 text-xl font-bold first:mt-0">{children}</h1>,
-  h2: ({ children }) => <h2 className="mb-2 mt-4 text-lg font-semibold first:mt-0">{children}</h2>,
-  h3: ({ children }) => <h3 className="mb-2 mt-3 font-semibold first:mt-0">{children}</h3>,
+  p: ({ children }) => <p className="mb-1.5 last:mb-0 leading-5">{children}</p>,
+  ul: ({ children }) => <ul className="mb-1.5 ml-4 list-disc space-y-0.5">{children}</ul>,
+  ol: ({ children }) => <ol className="mb-1.5 ml-4 list-decimal space-y-0.5">{children}</ol>,
+  li: ({ children }) => <li className="leading-5">{children}</li>,
+  h1: ({ children }) => <h1 className="mb-1.5 mt-3 text-sm font-bold first:mt-0">{children}</h1>,
+  h2: ({ children }) => <h2 className="mb-1 mt-2 text-xs font-semibold first:mt-0">{children}</h2>,
+  h3: ({ children }) => <h3 className="mb-1 mt-2 font-semibold first:mt-0">{children}</h3>,
   blockquote: ({ children }) => (
-    <blockquote className="my-3 border-l-2 border-border pl-4 text-muted-foreground">
+    <blockquote className="my-1.5 border-l-2 border-border pl-3 text-muted-foreground">
       {children}
     </blockquote>
   ),
@@ -68,18 +68,18 @@ const DEFAULT_COMPONENTS: Partial<Components> = {
     </a>
   ),
   table: ({ children }) => (
-    <div className="my-3 overflow-x-auto rounded-lg border border-border">
-      <table className="w-full border-collapse text-sm">{children}</table>
+    <div className="my-1.5 overflow-x-auto rounded border border-border">
+      <table className="w-full border-collapse text-xs">{children}</table>
     </div>
   ),
   thead: ({ children }) => <thead className="bg-muted/50">{children}</thead>,
   th: ({ children }) => (
-    <th className="border-b border-border px-4 py-2 text-left font-semibold">{children}</th>
+    <th className="border-b border-border px-3 py-1 text-left font-semibold">{children}</th>
   ),
   td: ({ children }) => (
-    <td className="border-b border-border/50 px-4 py-2 last:border-0">{children}</td>
+    <td className="border-b border-border/50 px-3 py-1 last:border-0">{children}</td>
   ),
-  hr: () => <hr className="my-4 border-border" />,
+  hr: () => <hr className="my-2 border-border" />,
   strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
 }
@@ -116,7 +116,7 @@ function MarkdownComponent({ children, className, components = DEFAULT_COMPONENT
   }, [children])
 
   return (
-    <div className={cn("text-sm", className)}>
+    <div className={cn("text-xs", className)}>
       {blocks.map((block, i) => (
         <MemoizedBlock key={i} content={block} components={components} />
       ))}
