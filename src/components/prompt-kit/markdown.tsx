@@ -50,13 +50,13 @@ const DEFAULT_COMPONENTS: Partial<Components> = {
     )
   },
   pre: ({ children }) => <>{children}</>,
-  p: ({ children }) => <p className="mb-1.5 last:mb-0 leading-5">{children}</p>,
-  ul: ({ children }) => <ul className="mb-1.5 ml-4 list-disc space-y-0.5">{children}</ul>,
-  ol: ({ children }) => <ol className="mb-1.5 ml-4 list-decimal space-y-0.5">{children}</ol>,
-  li: ({ children }) => <li className="leading-5">{children}</li>,
-  h1: ({ children }) => <h1 className="mb-1.5 mt-3 text-sm font-bold first:mt-0">{children}</h1>,
-  h2: ({ children }) => <h2 className="mb-1 mt-2 text-xs font-semibold first:mt-0">{children}</h2>,
-  h3: ({ children }) => <h3 className="mb-1 mt-2 font-semibold first:mt-0">{children}</h3>,
+  p: ({ children }) => <p className="mb-2 last:mb-0 leading-6 text-sm">{children}</p>,
+  ul: ({ children }) => <ul className="mb-2 ml-4 list-disc space-y-1">{children}</ul>,
+  ol: ({ children }) => <ol className="mb-2 ml-4 list-decimal space-y-1">{children}</ol>,
+  li: ({ children }) => <li className="leading-6 text-sm">{children}</li>,
+  h1: ({ children }) => <h1 className="mb-2 mt-4 text-base font-bold first:mt-0">{children}</h1>,
+  h2: ({ children }) => <h2 className="mb-1.5 mt-3 text-sm font-semibold first:mt-0">{children}</h2>,
+  h3: ({ children }) => <h3 className="mb-1 mt-2 text-sm font-semibold first:mt-0">{children}</h3>,
   blockquote: ({ children }) => (
     <blockquote className="my-1.5 border-l-2 border-border pl-3 text-muted-foreground">
       {children}
@@ -121,7 +121,7 @@ function MarkdownComponent({ children, className, components = DEFAULT_COMPONENT
   }, [children])
 
   return (
-    <div className={cn("text-xs", className)}>
+    <div className={cn("text-sm", className)}>
       {blocks.map((block, i) => (
         <MemoizedBlock key={i} content={block} components={components} />
       ))}

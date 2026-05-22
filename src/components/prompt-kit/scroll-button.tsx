@@ -17,7 +17,7 @@ export function ScrollButton({ className }: ScrollButtonProps) {
         type="button"
         onClick={() => scrollToBottom()}
         className={cn(
-          "pointer-events-auto flex items-center gap-1.5 rounded-full border border-border bg-background/95 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur-sm transition-colors hover:text-foreground",
+          "pointer-events-auto flex items-center gap-1.5 rounded-full border border-border bg-background/95 px-3 py-1.5 text-sm text-muted-foreground shadow-sm backdrop-blur-sm transition-colors hover:text-foreground",
           className
         )}
       >

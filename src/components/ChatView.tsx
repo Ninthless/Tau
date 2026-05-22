@@ -158,7 +158,7 @@ export function ChatView({ pendingSessionId, reloadKey }: { pendingSessionId?: s
       )}
 
       {rpcStatus === "disconnected" && (
-        <div className="mx-3 mb-2 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+        <div className="mx-3 mb-2 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           <WifiOffIcon className="size-3.5 shrink-0" />
           <span className="flex-1">Agent process disconnected</span>
           <button
@@ -182,7 +182,7 @@ export function ChatView({ pendingSessionId, reloadKey }: { pendingSessionId?: s
                   key={cmd.id}
                   type="button"
                   className={cn(
-                    "flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-xs transition-colors",
+                    "flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors",
                     i === cmdIndex ? "bg-accent text-accent-foreground" : "text-popover-foreground hover:bg-accent/50"
                   )}
                   onMouseEnter={() => setCmdIndex(i)}

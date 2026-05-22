@@ -65,7 +65,7 @@ function CodeBlockCode({
   }, [code, language])
 
   const classNames = cn(
-    "w-full overflow-x-auto text-[12px] [&>pre]:px-3 [&>pre]:py-2 [&>pre]:leading-relaxed",
+    "w-full overflow-x-auto text-sm [&>pre]:px-3 [&>pre]:py-2 [&>pre]:leading-relaxed",
     className
   )
 
@@ -116,7 +116,7 @@ export type DiffCodeBlockProps = {
 function DiffCodeBlock({ code, className }: DiffCodeBlockProps) {
   const lines = code.split("\n")
   return (
-    <div className={cn("w-full overflow-x-auto text-[12px]", className)}>
+    <div className={cn("w-full overflow-x-auto text-sm", className)}>
       <pre className="py-2 leading-relaxed">
         {lines.map((line, i) => {
           const isAdd = line.startsWith("+") && !line.startsWith("+++")

@@ -39,10 +39,10 @@ export function Tool({ block }: ToolProps) {
   const resultText = block.result ?? block.partialResult ?? ""
 
   return (
-    <div className="w-full border-l-2 border-border pl-3 text-xs">
+    <div className="w-full border-l-2 border-border pl-3.5 text-sm">
       <button
         type="button"
-        className="flex w-full items-center gap-2.5 py-1 text-left transition-opacity hover:opacity-80"
+        className="flex w-full items-center gap-2.5 py-1.5 text-left transition-opacity hover:opacity-80"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
       >
@@ -62,10 +62,10 @@ export function Tool({ block }: ToolProps) {
       </button>
 
       {open && (
-        <div className="pb-1.5 pt-0.5">
+        <div className="pb-2 pt-1">
           {Object.keys(block.args).length > 0 && (
-            <div className="mb-1.5">
-              <div className="mb-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">Input</div>
+            <div className="mb-2">
+              <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">Input</div>
               <div className="space-y-0.5 font-mono">
                 {Object.entries(block.args).map(([k, v]) => (
                   <div key={k} className="flex gap-2">
