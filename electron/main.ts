@@ -4,6 +4,9 @@ import { fileURLToPath } from "url"
 import { registerIpcHandlers } from "./ipc"
 import { initAgent, setWindow } from "./agent"
 
+process.stdout.on("error", (err: NodeJS.ErrnoException) => { if (err.code !== "EPIPE") throw err })
+process.stderr.on("error", (err: NodeJS.ErrnoException) => { if (err.code !== "EPIPE") throw err })
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
