@@ -14,7 +14,8 @@ Tau is not a replacement for Pi. It is a GUI workspace built on top of Pi's RPC 
 - Lists Pi extension commands, prompt commands, and skill commands.
 - Manages Pi packages through the official `@earendil-works/pi-coding-agent` package manager.
 - Browses [pi.dev packages](https://pi.dev/packages) with search, type filters, sorting, pagination, install, update, and remove actions.
-- Supports session switching, new sessions, fork targets, compaction, session naming, and HTML export.
+- Supports session switching with optimistic UI, new sessions, fork targets, compaction, session naming, and HTML export.
+- Displays live context window usage in the title bar with a color-coded progress indicator.
 
 ## Relationship To Pi
 
@@ -35,6 +36,7 @@ Tau uses Pi RPC for the agent session loop and Pi SDK APIs for package managemen
 - React
 - TypeScript
 - Tailwind CSS
+- shadcn/ui
 - `@earendil-works/pi-coding-agent`
 
 ## Getting Started
