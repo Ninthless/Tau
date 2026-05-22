@@ -2,13 +2,15 @@ import { useEffect, useState } from "react"
 import { PanelLeftIcon, Minus, Square, Maximize2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import type { SessionStats } from "../types"
 
 interface Props {
   sidebarOpen: boolean
   onToggleSidebar: () => void
+  sessionStats?: SessionStats | null
 }
 
-export function TitleBar({ sidebarOpen, onToggleSidebar }: Props) {
+export function TitleBar({ sidebarOpen, onToggleSidebar, sessionStats }: Props) {
   const [isMaximized, setIsMaximized] = useState(false)
 
   useEffect(() => {
@@ -16,6 +18,9 @@ export function TitleBar({ sidebarOpen, onToggleSidebar }: Props) {
     const unsub = window.winControls.onMaximizeChange(setIsMaximized)
     return unsub
   }, [])
+
+  const contextUsage = sessionStats?.contextUsage
+  const contextPercent = contextUsage?.percent ?? null
 
   return (
     <div className="flex h-10 shrink-0 items-center border-b border-sidebar-border bg-sidebar app-region-drag">
@@ -39,7 +44,33 @@ export function TitleBar({ sidebarOpen, onToggleSidebar }: Props) {
         </Tooltip>
       </div>
 
-      <div className="flex-1" />
+      <div className="flex flex-1 items-center justify-center px-4">
+        {contextPercent !== null && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-2 app-region-no-drag" aria-label={`Context usage: ${contextPercent}%`}>
+                <div className="h-1 w-24 overflow-hidden rounded-full bg-sidebar-accent">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all duration-500",
+                      contextPercent >= 90 ? "bg-destructive" :
+                      contextPercent >= 70 ? "bg-yellow-500" :
+                      "bg-primary/50"
+                    )}
+                    style={{ width: `${Math.min(contextPercent, 100)}%` }}
+                  />
+                </div>
+                <span className="text-xs text-muted-foreground tabular-nums">{contextPercent}%</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {contextUsage?.tokens != null
+                ? `Context: ${contextUsage.tokens.toLocaleString()} / ${contextUsage.contextWindow.toLocaleString()} tokens`
+                : `Context usage: ${contextPercent}%`}
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
 
       <div className="flex items-center app-region-no-drag">
         <Tooltip>

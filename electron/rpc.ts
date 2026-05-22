@@ -68,6 +68,7 @@ export class RpcClient {
   private cwd = process.cwd()
   private queuedSteering: string | null = null
   private queuedFollowUp: string | null = null
+  private spawnSeq = 0
 
   setWindow(w: BrowserWindow) {
     this.win = w
@@ -104,6 +105,8 @@ export class RpcClient {
     this.queuedSteering = null
     this.queuedFollowUp = null
 
+    console.log("[pi rpc] spawning:", this.findNodePath(), piCliPath, "cwd:", cwd)
+
     const child = spawn(this.findNodePath(), [piCliPath, "--mode", "rpc", "--continue"], {
       cwd,
       stdio: ["pipe", "pipe", "pipe"],
@@ -131,15 +134,24 @@ export class RpcClient {
       }
     })
 
+    let stderrBuf = ""
     child.stderr!.on("data", (chunk: Buffer) => {
-      console.error("[pi rpc stderr]", chunk.toString("utf8").trim())
+      const text = chunk.toString("utf8")
+      stderrBuf += text
+      process.stderr.write("[pi rpc stderr] " + text)
+    })
+    child.stderr!.on("close", () => {
+      if (stderrBuf.trim()) {
+        console.error("[pi rpc stderr final]", stderrBuf.trim())
+      }
     })
 
-    child.on("exit", (code) => {
-      console.log("[pi rpc] process exited with code", code)
+    child.on("exit", (code, signal) => {
+      console.log("[pi rpc] process exited — code:", code, "signal:", signal)
       if (this.proc === child) {
         this.proc = null
-        this.rejectPending(new Error(`RPC process exited with code ${code ?? "unknown"}`))
+        this.rejectPending(new Error(`RPC process exited (code=${code ?? "null"}, signal=${signal ?? "none"})`))
+        this.win?.webContents.send("rpc:status", { status: "disconnected", code })
       }
     })
 
@@ -148,13 +160,40 @@ export class RpcClient {
       if (this.proc === child) {
         this.proc = null
         this.rejectPending(err)
+        this.win?.webContents.send("rpc:status", { status: "disconnected", error: err.message })
       }
     })
 
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    if (child.exitCode !== null) {
-      throw new Error(`RPC process exited immediately with code ${child.exitCode}`)
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        if (child.exitCode !== null || child.signalCode !== null) {
+          reject(new Error(
+            `RPC process exited immediately (code=${child.exitCode ?? "null"}, signal=${child.signalCode ?? "none"})`
+          ))
+        } else {
+          resolve()
+        }
+      }, 3000)
+
+      const onFirstLine = () => {
+        clearTimeout(timeout)
+        resolve()
+      }
+
+      child.stdout!.once("data", onFirstLine)
+
+      child.once("exit", (code, signal) => {
+        clearTimeout(timeout)
+        child.stdout!.removeListener("data", onFirstLine)
+        reject(new Error(`RPC process exited immediately (code=${code ?? "null"}, signal=${signal ?? "none"})`))
+      })
+    })
+    if (child.exitCode !== null || child.signalCode !== null) {
+      throw new Error(
+        `RPC process exited immediately (code=${child.exitCode ?? "null"}, signal=${child.signalCode ?? "none"})`
+      )
     }
+    this.win?.webContents.send("rpc:status", { status: "connected" })
   }
 
   stop() {
@@ -412,7 +451,11 @@ value.addEventListener("keydown", (e) => {
   }
 
   async restart(cwd?: string) {
-    await this.spawnProcess(cwd ?? this.cwd)
+    const target = cwd ?? this.cwd
+    const seq = ++this.spawnSeq
+    this.stop()
+    if (seq !== this.spawnSeq) return
+    await this.spawnProcess(target)
   }
 
   get isRunning() {

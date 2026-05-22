@@ -38,6 +38,14 @@ export async function initAgent(cwd: string) {
   }
 }
 
+export async function reconnect() {
+  await rpc.restart()
+  const state = await rpc.sendCommand({ type: "get_state" }).catch(() => null)
+  if (state && win) {
+    win.webContents.send("agent:stateChange", normalizeState(state))
+  }
+}
+
 function normalizeState(raw: unknown): AgentState {
   const s = raw as Record<string, unknown>
   const model = s["model"] as Record<string, unknown> | undefined
@@ -51,6 +59,8 @@ function normalizeState(raw: unknown): AgentState {
     queuedFollowUp: queue.queuedFollowUp,
     isRetrying: (s["isRetrying"] as boolean) ?? false,
     isCompacting: (s["isCompacting"] as boolean) ?? false,
+    autoCompactionEnabled: (s["autoCompactionEnabled"] as boolean | undefined),
+    sessionName: (s["sessionName"] as string | undefined),
   }
 }
 
@@ -85,7 +95,7 @@ export async function compact(instructions?: string) {
 }
 
 export async function navigateTree(targetId: string) {
-  await rpc.sendCommand({ type: "fork", entryId: targetId })
+  await rpc.sendCommand({ type: "navigate_tree", targetId })
   await emitState()
 }
 
@@ -96,9 +106,12 @@ export async function setSessionName(name: string) {
 
 export async function getSessionStats(): Promise<SessionStats | null> {
   try {
-    const raw = await rpc.sendCommand({ type: "get_session_stats" }) as Record<string, unknown>
-    const state = await rpc.sendCommand({ type: "get_state" }).catch(() => null) as Record<string, unknown> | null
+    const [raw, state] = await Promise.all([
+      rpc.sendCommand({ type: "get_session_stats" }) as Promise<Record<string, unknown>>,
+      rpc.sendCommand({ type: "get_state" }).catch(() => null) as Promise<Record<string, unknown> | null>,
+    ])
     const tokens = raw["tokens"] as Record<string, unknown> | undefined
+    const contextUsageRaw = raw["contextUsage"] as Record<string, unknown> | undefined
     return {
       sessionFile: raw["sessionFile"] as string | undefined,
       sessionId: raw["sessionId"] as string ?? "",
@@ -116,6 +129,11 @@ export async function getSessionStats(): Promise<SessionStats | null> {
         total: (tokens?.["total"] as number) ?? 0,
       },
       cost: (raw["cost"] as number) ?? 0,
+      contextUsage: contextUsageRaw ? {
+        tokens: (contextUsageRaw["tokens"] as number | null) ?? null,
+        contextWindow: (contextUsageRaw["contextWindow"] as number) ?? 0,
+        percent: (contextUsageRaw["percent"] as number | null) ?? null,
+      } : undefined,
     }
   } catch {
     return null
@@ -174,22 +192,41 @@ export async function getMessages(): Promise<ChatMessage[]> {
 
 export async function getSessionTree(): Promise<SessionTreeItem[]> {
   try {
-    const raw = await rpc.sendCommand({ type: "get_fork_messages" }) as Record<string, unknown>
+    const [raw, stateRaw] = await Promise.all([
+      rpc.sendCommand({ type: "get_messages" }) as Promise<Record<string, unknown>>,
+      rpc.sendCommand({ type: "get_state" }).catch(() => null) as Promise<Record<string, unknown> | null>,
+    ])
     const messages = raw["messages"] as unknown[]
     if (!Array.isArray(messages)) return []
-    return messages.map((item, index) => {
-      const msg = item as Record<string, unknown>
-      return {
-        id: (msg["entryId"] as string) ?? String(index),
-        parentId: null,
-        type: "fork",
-        role: "user",
-        title: (msg["text"] as string) ?? "",
-        timestamp: "",
-        depth: 0,
-        active: false,
-      }
-    })
+    const currentSessionId = (stateRaw?.["sessionId"] as string) ?? ""
+    return messages
+      .filter((item) => {
+        const msg = item as Record<string, unknown>
+        return msg["role"] === "user" || msg["role"] === "assistant"
+      })
+      .map((item, index) => {
+        const msg = item as Record<string, unknown>
+        const role = msg["role"] as string
+        const content = msg["content"]
+        let title = ""
+        if (typeof content === "string") {
+          title = content.slice(0, 80)
+        } else if (Array.isArray(content)) {
+          const textPart = (content as Record<string, unknown>[]).find((p) => p["type"] === "text")
+          title = ((textPart?.["text"] as string) ?? "").slice(0, 80)
+        }
+        return {
+          id: (msg["id"] as string) ?? String(index),
+          parentId: (msg["parentId"] as string | null) ?? null,
+          type: role,
+          role,
+          title: title || `${role} message`,
+          timestamp: (msg["timestamp"] as string) ?? "",
+          depth: 0,
+          active: (msg["id"] as string) === currentSessionId,
+          label: (msg["label"] as string | undefined),
+        }
+      })
   } catch {
     return []
   }
@@ -197,7 +234,10 @@ export async function getSessionTree(): Promise<SessionTreeItem[]> {
 
 export async function exportSessionHtml(): Promise<string> {
   const raw = await rpc.sendCommand({ type: "export_html" }) as Record<string, unknown>
-  return (raw["path"] as string) ?? ""
+  const filePath = raw["path"] as string | undefined
+  if (!filePath) return ""
+  const { readFile } = await import("node:fs/promises")
+  return readFile(filePath, "utf8").catch(() => "")
 }
 
 export async function reloadSession() {
@@ -213,12 +253,14 @@ export async function newSession(cwd: string) {
     await rpc.restart(cwd)
   }
   await rpc.sendCommand({ type: "new_session" })
-  await emitState()
 }
 
-export async function switchSession(path: string) {
+export async function switchSession(path: string, cwd?: string) {
+  if (cwd && cwd !== rpc.getCwd()) {
+    settingsManager = SettingsManager.create(cwd, getAgentDir())
+    await rpc.restart(cwd)
+  }
   await rpc.sendCommand({ type: "switch_session", sessionPath: path })
-  await emitState()
 }
 
 export async function fork(entryId: string) {
@@ -398,6 +440,8 @@ export async function getState(): Promise<AgentState> {
       queuedFollowUp: null,
       isRetrying: false,
       isCompacting: false,
+      autoCompactionEnabled: undefined,
+      sessionName: undefined,
     }
   }
 }

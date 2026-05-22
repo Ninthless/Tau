@@ -13,7 +13,7 @@ import {
   ArrowUpIcon, AtSignIcon, DownloadIcon, GitForkIcon,
   GlobeIcon, ImageIcon, ListTreeIcon, MessageSquareTextIcon,
   PackageIcon, PaperclipIcon, PencilLineIcon, RefreshCwIcon,
-  SquareIcon, WrenchIcon, XIcon,
+  SquareIcon, WifiOffIcon, WrenchIcon, XIcon,
 } from "lucide-react"
 
 type SendMode = "prompt" | "steer" | "followUp"
@@ -26,12 +26,13 @@ type CmdItem = {
   action: () => void
 }
 
-export function ChatView() {
+export function ChatView({ pendingSessionId, reloadKey }: { pendingSessionId?: string; reloadKey?: number }) {
   const {
-    messages, agentState,
+    messages, agentState, rpcStatus,
     sendPrompt, sendSteer, sendFollowUp,
     abort, compact, cycleThinkingLevel,
-  } = useAgent()
+    isLoadingMessages,
+  } = useAgent(pendingSessionId, reloadKey)
 
   const [input, setInput] = useState("")
   const [sendMode, setSendMode] = useState<SendMode>("prompt")
@@ -144,7 +145,32 @@ export function ChatView() {
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
-      <MessageList messages={messages} />
+      {isLoadingMessages ? (
+        <div className="flex flex-1 items-center justify-center">
+          <Loader variant="typing" />
+        </div>
+      ) : (
+        <MessageList
+          messages={messages}
+          isRetrying={agentState.isRetrying}
+          isCompacting={agentState.isCompacting}
+        />
+      )}
+
+      {rpcStatus === "disconnected" && (
+        <div className="mx-3 mb-2 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          <WifiOffIcon className="size-3.5 shrink-0" />
+          <span className="flex-1">Agent process disconnected</span>
+          <button
+            type="button"
+            className="flex items-center gap-1 rounded-md border border-destructive/40 px-2 py-0.5 text-[11px] font-medium transition-colors hover:bg-destructive/20"
+            onClick={() => window.piAgent.reconnect()}
+          >
+            <RefreshCwIcon className="size-3" />
+            Reconnect
+          </button>
+        </div>
+      )}
 
       <div className="relative shrink-0 px-3 pb-3">
         <div className="pointer-events-none absolute inset-x-0 -top-10 h-10 bg-gradient-to-b from-transparent to-background" />

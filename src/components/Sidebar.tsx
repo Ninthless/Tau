@@ -16,7 +16,7 @@ import {
 
 interface Props {
   onNewSession: (cwd: string) => void
-  onSwitchSession: (path: string) => void
+  onSwitchSession: (path: string, cwd: string, optimisticId?: string) => void
   onOpenSettings: () => void
   currentSessionId: string
   externalCwd?: string
@@ -78,6 +78,16 @@ export function Sidebar({ onNewSession, onSwitchSession, onOpenSettings, current
       setProjectCwds([])
     })
   }, [refresh, currentSessionId])
+
+  useEffect(() => {
+    const unsub = window.piAgent.onEvent((raw) => {
+      const event = raw as Record<string, unknown>
+      if (event.type === "session_info_changed" || event.type === "agent_end") {
+        refresh().catch(() => {})
+      }
+    })
+    return unsub
+  }, [refresh])
 
   useEffect(() => {
     if (!externalCwd) return
@@ -177,7 +187,7 @@ export function Sidebar({ onNewSession, onSwitchSession, onOpenSettings, current
                       active={session.id === currentSessionId}
                       indent
                       session={session}
-                      onClick={() => onSwitchSession(session.path)}
+                      onClick={() => onSwitchSession(session.path, session.cwd, session.id)}
                       onDelete={() => handleDeleteSession(session.path)}
                     />
                   ))
@@ -202,7 +212,7 @@ export function Sidebar({ onNewSession, onSwitchSession, onOpenSettings, current
                 key={session.path}
                 active={session.id === currentSessionId}
                 session={session}
-                onClick={() => onSwitchSession(session.path)}
+                onClick={() => onSwitchSession(session.path, session.cwd, session.id)}
                 onDelete={() => handleDeleteSession(session.path)}
               />
             ))}

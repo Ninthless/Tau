@@ -16,7 +16,7 @@ contextBridge.exposeInMainWorld("piAgent", {
   exportSessionHtml: () => ipcRenderer.invoke("agent:exportSessionHtml"),
   reloadSession: () => ipcRenderer.invoke("agent:reloadSession"),
   newSession: (cwd: string) => ipcRenderer.invoke("agent:newSession", { cwd }),
-  switchSession: (path: string) => ipcRenderer.invoke("agent:switchSession", { path }),
+  switchSession: (path: string, cwd?: string) => ipcRenderer.invoke("agent:switchSession", { path, cwd }),
   fork: (entryId: string) => ipcRenderer.invoke("agent:fork", { entryId }),
   listSessions: (cwd: string) => ipcRenderer.invoke("agent:listSessions", { cwd }),
   listAllSessions: () => ipcRenderer.invoke("agent:listAllSessions"),
@@ -58,6 +58,14 @@ contextBridge.exposeInMainWorld("piAgent", {
     ipcRenderer.on("agent:stateChange", listener)
     return () => ipcRenderer.removeListener("agent:stateChange", listener)
   },
+
+  onRpcStatus: (cb: (status: unknown) => void) => {
+    const listener = (_: Electron.IpcRendererEvent, status: unknown) => cb(status)
+    ipcRenderer.on("rpc:status", listener)
+    return () => ipcRenderer.removeListener("rpc:status", listener)
+  },
+
+  reconnect: () => ipcRenderer.invoke("agent:reconnect"),
 
   onPackageProgress: (cb: (event: unknown) => void) => {
     const listener = (_: Electron.IpcRendererEvent, event: unknown) => cb(event)

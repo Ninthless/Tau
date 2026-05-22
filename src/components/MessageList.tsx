@@ -4,14 +4,17 @@ import { TextShimmer } from "./prompt-kit/text-shimmer"
 import { Tool } from "./prompt-kit/tool"
 import { ChatContainerRoot, ChatContainerContent } from "./prompt-kit/chat-container"
 import { ScrollButton } from "./prompt-kit/scroll-button"
-import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
+import { AlertCircleIcon, CheckIcon, ChevronDownIcon, ChevronRightIcon, CopyIcon, PackageIcon, RefreshCwIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
 import type { ChatMessage } from "../types"
 
 interface Props {
   messages: ChatMessage[]
+  isRetrying?: boolean
+  isCompacting?: boolean
 }
 
-export function MessageList({ messages }: Props) {
+export function MessageList({ messages, isRetrying, isCompacting }: Props) {
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center p-8">
@@ -31,6 +34,18 @@ export function MessageList({ messages }: Props) {
         {messages.map((msg) => (
           <MessageRow key={msg.id} message={msg} />
         ))}
+        {isCompacting && (
+          <div className="flex items-center gap-2 py-1 text-[11px] text-muted-foreground">
+            <PackageIcon className="size-3 shrink-0" />
+            <TextShimmer>Compacting conversation history…</TextShimmer>
+          </div>
+        )}
+        {isRetrying && !isCompacting && (
+          <div className="flex items-center gap-2 py-1 text-[11px] text-muted-foreground">
+            <RefreshCwIcon className="size-3 shrink-0 animate-spin" />
+            <TextShimmer>Retrying…</TextShimmer>
+          </div>
+        )}
       </ChatContainerContent>
       <ScrollButton />
     </ChatContainerRoot>
@@ -52,9 +67,7 @@ function MessageRow({ message }: { message: ChatMessage }) {
               {block.text}
             </div>
           ) : (
-            <div key={i} className="w-full">
-              <Markdown>{block.text}</Markdown>
-            </div>
+            <AssistantTextRow key={i} text={block.text} />
           )
         }
 
@@ -77,8 +90,47 @@ function MessageRow({ message }: { message: ChatMessage }) {
           return <Tool key={i} block={block} />
         }
 
+        if (block.type === "error") {
+          return (
+            <div key={i} className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              <AlertCircleIcon className="mt-0.5 size-3.5 shrink-0" />
+              <span>{block.message}</span>
+            </div>
+          )
+        }
+
         return null
       })}
+    </div>
+  )
+}
+
+function AssistantTextRow({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
+  return (
+    <div className="group relative w-full">
+      <Markdown>{text}</Markdown>
+      <button
+        type="button"
+        onClick={handleCopy}
+        className={cn(
+          "absolute right-0 top-0 flex items-center gap-1 rounded-md border border-border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100 hover:text-foreground",
+          copied && "opacity-100"
+        )}
+      >
+        {copied
+          ? <><CheckIcon className="size-2.5" />Copied</>
+          : <><CopyIcon className="size-2.5" />Copy</>
+        }
+      </button>
     </div>
   )
 }

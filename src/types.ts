@@ -29,7 +29,12 @@ export interface ToolCallBlock {
   collapsed: boolean
 }
 
-export type MessageBlock = TextBlock | ImageBlock | ThinkingBlock | ToolCallBlock
+export interface ErrorBlock {
+  type: "error"
+  message: string
+}
+
+export type MessageBlock = TextBlock | ImageBlock | ThinkingBlock | ToolCallBlock | ErrorBlock
 
 export interface ChatMessage {
   id: string
@@ -64,6 +69,11 @@ export interface SessionStats {
     total: number
   }
   cost: number
+  contextUsage?: {
+    tokens: number | null
+    contextWindow: number
+    percent: number | null
+  }
 }
 
 export interface SessionTreeItem {
@@ -98,6 +108,8 @@ export interface AgentState {
   queuedFollowUp: string | null
   isRetrying: boolean
   isCompacting: boolean
+  autoCompactionEnabled?: boolean
+  sessionName?: string
 }
 
 export interface AvailableModel {
@@ -146,6 +158,8 @@ export interface RuntimeSettings {
   collapseChangelog: boolean
   enableInstallTelemetry: boolean
 }
+
+export type RpcStatus = "connecting" | "connected" | "disconnected"
 
 export interface PiPackageInfo {
   source: string
@@ -198,7 +212,7 @@ declare global {
       followUp: (text: string) => Promise<void>
       abort: () => Promise<void>
       newSession: (cwd: string) => Promise<void>
-      switchSession: (path: string) => Promise<void>
+      switchSession: (path: string, cwd?: string) => Promise<void>
       fork: (entryId: string) => Promise<void>
       compact: (instructions?: string) => Promise<void>
       navigateTree: (targetId: string) => Promise<void>
@@ -233,6 +247,8 @@ declare global {
       onEvent: (cb: (event: unknown) => void) => () => void
       onStateChange: (cb: (state: AgentState) => void) => () => void
       onPackageProgress: (cb: (event: PiPackageProgress) => void) => () => void
+      onRpcStatus: (cb: (status: unknown) => void) => () => void
+      reconnect: () => Promise<void>
     }
     winControls: {
       minimize: () => Promise<void>

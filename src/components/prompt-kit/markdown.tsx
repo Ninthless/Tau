@@ -3,7 +3,7 @@ import { memo, useMemo } from "react"
 import ReactMarkdown, { type Components } from "react-markdown"
 import remarkBreaks from "remark-breaks"
 import remarkGfm from "remark-gfm"
-import { CodeBlock, CodeBlockCode, CodeBlockHeader } from "./code-block"
+import { CodeBlock, CodeBlockCode, CodeBlockHeader, DiffCodeBlock } from "./code-block"
 
 export type MarkdownProps = {
   children: string
@@ -37,10 +37,15 @@ const DEFAULT_COMPONENTS: Partial<Components> = {
     const language = extractLanguage(className)
     const code = String(children).replace(/\n$/, "")
 
+    const isDiff = language === "diff" || language === "patch"
+
     return (
       <CodeBlock>
         {language !== "text" && <CodeBlockHeader language={language} />}
-        <CodeBlockCode code={code} language={language} />
+        {isDiff
+          ? <DiffCodeBlock code={code} />
+          : <CodeBlockCode code={code} language={language} />
+        }
       </CodeBlock>
     )
   },

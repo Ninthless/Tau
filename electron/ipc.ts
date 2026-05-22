@@ -30,7 +30,7 @@ export function registerIpcHandlers() {
   ipcMain.handle("agent:exportSessionHtml", () => agent.exportSessionHtml())
   ipcMain.handle("agent:reloadSession", () => agent.reloadSession())
   ipcMain.handle("agent:newSession", (_e, { cwd }) => agent.newSession(cwd))
-  ipcMain.handle("agent:switchSession", (_e, { path }) => agent.switchSession(path))
+  ipcMain.handle("agent:switchSession", (_e, { path, cwd }) => agent.switchSession(path, cwd))
   ipcMain.handle("agent:fork", (_e, { entryId }) => agent.fork(entryId))
   ipcMain.handle("agent:listSessions", (_e, { cwd }) => agent.listSessions(cwd))
   ipcMain.handle("agent:listAllSessions", () => agent.listAllSessions())
@@ -61,6 +61,7 @@ export function registerIpcHandlers() {
   ipcMain.handle("agent:removePackage", (_e, { source, local }) => agent.removePackage(source, local))
   ipcMain.handle("agent:updatePackage", (_e, { source }) => agent.updatePackage(source))
   ipcMain.handle("agent:searchPackageGallery", (_e, { query, page, type, sort }) => agent.searchPackageGallery(query, page, type, sort))
+  ipcMain.handle("agent:reconnect", () => agent.reconnect())
 
   ipcMain.handle("settings:get", () => {
     const s = store.get("settings")

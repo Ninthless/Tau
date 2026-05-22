@@ -108,4 +108,38 @@ function CodeBlockHeader({ language, filename, children, className }: CodeBlockH
   )
 }
 
-export { CodeBlock, CodeBlockCode, CodeBlockHeader }
+export type DiffCodeBlockProps = {
+  code: string
+  className?: string
+}
+
+function DiffCodeBlock({ code, className }: DiffCodeBlockProps) {
+  const lines = code.split("\n")
+  return (
+    <div className={cn("w-full overflow-x-auto text-[12px]", className)}>
+      <pre className="py-2 leading-relaxed">
+        {lines.map((line, i) => {
+          const isAdd = line.startsWith("+") && !line.startsWith("+++")
+          const isDel = line.startsWith("-") && !line.startsWith("---")
+          const isHunk = line.startsWith("@@")
+          return (
+            <div
+              key={i}
+              className={cn(
+                "px-3",
+                isAdd && "bg-green-500/15 text-green-700 dark:text-green-400",
+                isDel && "bg-red-500/15 text-red-700 dark:text-red-400",
+                isHunk && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+                !isAdd && !isDel && !isHunk && "text-foreground",
+              )}
+            >
+              <code className="font-mono">{line || " "}</code>
+            </div>
+          )
+        })}
+      </pre>
+    </div>
+  )
+}
+
+export { CodeBlock, CodeBlockCode, CodeBlockHeader, DiffCodeBlock }
